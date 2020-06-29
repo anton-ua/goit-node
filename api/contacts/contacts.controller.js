@@ -2,138 +2,160 @@ const path = require("path");
 const fs = require("fs");
 const { promises: fsPromise } = fs;
 const Joi = require("@hapi/joi");
+const contactsModules = require("./contact.modules");
 
 const contactsPath = path.join(__dirname, "../../db/contacts.json");
 
-const getContactsList = (req, res, next) => {
-  fsPromise.readFile(contactsPath).then((data) => {
-    res.send(data);
-  });
-};
+class contactsController {
+  static getContactsList = async (req, res, next) => {
+    try {
+      const contactsList = await fsPromise.readFile(contactsPath);
 
-exports.getContactsList = getContactsList;
-
-const newId = (data) => data[data.length - 1].id + 1;
-const postContact = (req, res, next) => {
-  fsPromise.readFile(contactsPath).then((data) => {
-    const parsedData = JSON.parse(data);
-
-    const contactToAdd = { id: newId(parsedData), ...req.body };
-
-    const newContactsList = [...parsedData, contactToAdd];
-
-    fsPromise
-      .writeFile(contactsPath, JSON.stringify(newContactsList))
-      .then(() => {
-        res.status(200).send(contactToAdd);
-      });
-  });
-};
-
-exports.postContact = postContact;
-
-const validateNewContact = async (req, res, next) => {
-  const schema = Joi.object({
-    name: Joi.string().required(),
-    email: Joi.string().required(),
-    phone: Joi.string().required(),
-  });
-
-  const validation = await schema.validate(req.body);
-
-  if (validation.error) {
-    return res.status(400).send({
-      message: `missing required ${validation.error.details[0].path[0]}`,
-    });
-  }
-
-  next();
-};
-
-exports.validateNewContact = validateNewContact;
-
-const getById = (req, res, next) => {
-  fsPromise.readFile(contactsPath).then((data) => {
-    const parsedData = JSON.parse(data);
-
-    const targetContact = parsedData.find(
-      ({ id }) => id === parseInt(req.params.id)
-    );
-
-    if (targetContact) {
-      res.status(200).send(targetContact);
-    } else {
-      res.status(404).send({ message: "Not found" });
+      res.status(200).send(contactsList);
+    } catch (err) {
+      next(err);
     }
-  });
-};
+  };
 
-exports.getById = getById;
+  static postContact = async (req, res, next) => {
+    try {
+      const contactsList = await fsPromise.readFile(contactsPath);
 
-const removeContact = (req, res, next) => {
-  fsPromise.readFile(contactsPath).then((data) => {
-    const parsedData = JSON.parse(data);
+      const parsedContactsList = JSON.parse(contactsList);
 
-    const targetContact = parsedData.find(
-      ({ id }) => id === parseInt(req.params.id)
-    );
+      const contactToAdd = {
+        id: contactsModules.newId(parsedContactsList),
+        ...req.body,
+      };
 
-    if (targetContact) {
-      const newContactsList = parsedData.filter(
-        ({ id }) => id !== parseInt(req.params.id)
+      const newContactsList = [...parsedContactsList, contactToAdd];
+
+      await fsPromise.writeFile(contactsPath, JSON.stringify(newContactsList));
+
+      res.status(201).send(contactToAdd);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  static validateNewContact = async (req, res, next) => {
+    try {
+      const schema = Joi.object({
+        name: Joi.string().required(),
+        email: Joi.string().required(),
+        phone: Joi.string().required(),
+      });
+
+      const validation = await schema.validate(req.body);
+
+      if (validation.error) {
+        return res.status(400).send({
+          message: `missing required ${validation.error.details[0].path[0]}`,
+        });
+      }
+
+      next();
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  static getContactById = async (req, res, next) => {
+    try {
+      const contactsList = await fsPromise.readFile(contactsPath);
+
+      const parsedContactsList = JSON.parse(contactsList);
+
+      const targetContact = parsedContactsList.find(
+        ({ id }) => id === parseInt(req.params.id)
       );
 
-      fsPromise
-        .writeFile(contactsPath, JSON.stringify(newContactsList))
-        .then(() => {
-          res.status(200).send({ message: "contact deleted" });
-        });
-    } else {
-      res.status(404).send({ message: "Not found" });
-    }
-  });
-};
-
-exports.removeContact = removeContact;
-
-const validateUpdateContact = async (req, res, next) => {
-  const schema = Joi.object({
-    name: Joi.string(),
-    email: Joi.string(),
-    phone: Joi.string(),
-  });
-
-  const validation = await schema.validate(req.body);
-
-  if (validation.error) {
-    return res.status(400).send({
-      message: "missing fields",
-    });
-  }
-
-  next();
-};
-
-exports.validateUpdateContact = validateUpdateContact;
-
-const updateContact = (req, res, next) => {
-  fsPromise.readFile(contactsPath).then((data) => {
-    const parsedData = JSON.parse(data);
-
-    const targetContact = parsedData.find(
-      ({ id }) => id === parseInt(req.params.id)
-    );
-
-    if (targetContact) {
-      Object.assign(targetContact, req.body);
-
-      fsPromise.writeFile(contactsPath, JSON.stringify(parsedData)).then(() => {
+      if (targetContact) {
         res.status(200).send(targetContact);
-      });
-    } else {
-      res.status(404).send({ message: "Not found" });
+      } else {
+        res.status(404).send({ message: "Not found" });
+      }
+    } catch (err) {
+      next(err);
     }
-  });
-};
+  };
 
-exports.updateContact = updateContact;
+  static removeContact = async (req, res, next) => {
+    try {
+      const contactsList = await fsPromise.readFile(contactsPath);
+
+      const parsedContactsList = JSON.parse(contactsList);
+
+      const targetContact = parsedContactsList.find(
+        ({ id }) => id === parseInt(req.params.id)
+      );
+
+      if (targetContact) {
+        const newContactsList = parsedContactsList.filter(
+          ({ id }) => id !== parseInt(req.params.id)
+        );
+
+        await fsPromise.writeFile(
+          contactsPath,
+          JSON.stringify(newContactsList)
+        );
+
+        res.status(200).send({ message: "contact deleted" });
+      } else {
+        res.status(404).send({ message: "Not found" });
+      }
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  static updateContact = async (req, res, next) => {
+    try {
+      const contactsList = await fsPromise.readFile(contactsPath);
+
+      const parsedContactsList = JSON.parse(contactsList);
+
+      const targetContact = parsedContactsList.find(
+        ({ id }) => id === parseInt(req.params.id)
+      );
+
+      if (targetContact) {
+        Object.assign(targetContact, req.body);
+
+        await fsPromise.writeFile(
+          contactsPath,
+          JSON.stringify(parsedContactsList)
+        );
+        res.status(200).send(targetContact);
+      } else {
+        res.status(404).send({ message: "Not found" });
+      }
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  static validateUpdateContact = async (req, res, next) => {
+    try {
+      const schema = Joi.object({
+        name: Joi.string(),
+        email: Joi.string(),
+        phone: Joi.string(),
+      });
+
+      const validation = await schema.validate(req.body);
+
+      if (validation.error) {
+        return res.status(400).send({
+          message: "missing fields",
+        });
+      }
+
+      next();
+    } catch (err) {
+      next(err);
+    }
+  };
+}
+
+module.exports = contactsController;
