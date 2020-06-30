@@ -1,15 +1,15 @@
-const path = require("path");
-const fs = require("fs");
-const { promises: fsPromise } = fs;
 const Joi = require("@hapi/joi");
-const contactsModules = require("./contact.modules");
-
-const contactsPath = path.join(__dirname, "../../db/contacts.json");
+const contactModel = require("./contact.model");
+const {
+  Types: { ObjectId },
+} = require("mongoose");
 
 class contactsController {
   static getContactsList = async (req, res, next) => {
     try {
-      const contactsList = await fsPromise.readFile(contactsPath);
+      const contactsList = await contactModel.find();
+
+      // console.log("contactsList", contactsList);
 
       res.status(200).send(contactsList);
     } catch (err) {
@@ -19,18 +19,7 @@ class contactsController {
 
   static postContact = async (req, res, next) => {
     try {
-      const contactsList = await fsPromise.readFile(contactsPath);
-
-      const parsedContactsList = JSON.parse(contactsList);
-
-      const contactToAdd = {
-        id: contactsModules.newId(parsedContactsList),
-        ...req.body,
-      };
-
-      const newContactsList = [...parsedContactsList, contactToAdd];
-
-      await fsPromise.writeFile(contactsPath, JSON.stringify(newContactsList));
+      const contactToAdd = await contactModel.create(req.body);
 
       res.status(201).send(contactToAdd);
     } catch (err) {
@@ -60,15 +49,19 @@ class contactsController {
     }
   };
 
+  static validateId = (req, res, next) => {
+    const { id } = req.params;
+    if (!ObjectId.isValid(id)) {
+      res.status(404).send({ message: "wrong Id" });
+    }
+
+    next();
+  };
+
   static getContactById = async (req, res, next) => {
     try {
-      const contactsList = await fsPromise.readFile(contactsPath);
-
-      const parsedContactsList = JSON.parse(contactsList);
-
-      const targetContact = parsedContactsList.find(
-        ({ id }) => id === parseInt(req.params.id)
-      );
+      const { id } = req.params;
+      const targetContact = await contactModel.findById(id);
 
       if (targetContact) {
         res.status(200).send(targetContact);
@@ -82,24 +75,11 @@ class contactsController {
 
   static removeContact = async (req, res, next) => {
     try {
-      const contactsList = await fsPromise.readFile(contactsPath);
+      const { id } = req.params;
 
-      const parsedContactsList = JSON.parse(contactsList);
-
-      const targetContact = parsedContactsList.find(
-        ({ id }) => id === parseInt(req.params.id)
-      );
+      const targetContact = await contactModel.findByIdAndRemove(id);
 
       if (targetContact) {
-        const newContactsList = parsedContactsList.filter(
-          ({ id }) => id !== parseInt(req.params.id)
-        );
-
-        await fsPromise.writeFile(
-          contactsPath,
-          JSON.stringify(newContactsList)
-        );
-
         res.status(200).send({ message: "contact deleted" });
       } else {
         res.status(404).send({ message: "Not found" });
@@ -111,21 +91,15 @@ class contactsController {
 
   static updateContact = async (req, res, next) => {
     try {
-      const contactsList = await fsPromise.readFile(contactsPath);
+      const { id } = req.params;
 
-      const parsedContactsList = JSON.parse(contactsList);
+      console.log(res.body);
 
-      const targetContact = parsedContactsList.find(
-        ({ id }) => id === parseInt(req.params.id)
-      );
+      const targetContact = await contactModel.findByIdAndUpdate(id, req.body, {
+        new: true,
+      });
 
       if (targetContact) {
-        Object.assign(targetContact, req.body);
-
-        await fsPromise.writeFile(
-          contactsPath,
-          JSON.stringify(parsedContactsList)
-        );
         res.status(200).send(targetContact);
       } else {
         res.status(404).send({ message: "Not found" });
