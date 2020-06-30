@@ -1,0 +1,12 @@
+
+[
+  { "id": 1, "name": "test", "email": "test@mail.com", "phone": "123-45-78" },
+  { "id": 2, "name": "test2", "email": "test2@mail.com", "phone": "123-45-78" },
+  {
+    "id": 4,
+    "name": "updated name",
+    "email": "test3@mail.com",
+    "phone": "123-45-78"
+  },
+  { "id": 5, "name": "test3", "email": "test3@mail.com", "phone": "123-45-78" }
+]
