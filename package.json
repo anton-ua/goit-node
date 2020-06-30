@@ -2,6 +2,7 @@
   "name": "goit-node",
   "version": "1.0.0",
   "description": "",
+
   "main": "app.js",
   "dependencies": {
     "@hapi/joi": "^17.1.1",
@@ -17,15 +18,20 @@
     "start": "node api/app",
     "dev": "nodemon api/app",
     "test": "echo \"Error: no test specified\" && exit 1"
+
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/anton-ua/goit-node.git"
   },
+
+
   "author": "",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/anton-ua/goit-node/issues"
   },
+
   "homepage": "https://github.com/anton-ua/goit-node#readme"
-}
+
+  
