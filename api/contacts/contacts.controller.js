@@ -7,9 +7,22 @@ const {
 class contactsController {
   static getContactsList = async (req, res, next) => {
     try {
-      const contactsList = await contactModel.find();
+      const options = {
+        page: (req.query && req.query.page) || "1",
+        limit: (req.query && req.query.limit) || "10",
+        sort: { name: 1 },
+      };
 
-      // console.log("contactsList", contactsList);
+      let filterBySubscription = null;
+
+      if (req.query && req.query.sub) {
+        filterBySubscription = { subscription: req.query.sub };
+      }
+
+      const contactsList = await contactModel.paginate(
+        { ...filterBySubscription },
+        options
+      );
 
       res.status(200).send(contactsList);
     } catch (err) {
@@ -33,6 +46,7 @@ class contactsController {
         name: Joi.string().required(),
         email: Joi.string().required(),
         phone: Joi.string().required(),
+        subscription: Joi.string().required(),
       });
 
       const validation = await schema.validate(req.body);
@@ -93,8 +107,6 @@ class contactsController {
     try {
       const { id } = req.params;
 
-      console.log(res.body);
-
       const targetContact = await contactModel.findByIdAndUpdate(id, req.body, {
         new: true,
       });
@@ -115,6 +127,7 @@ class contactsController {
         name: Joi.string(),
         email: Joi.string(),
         phone: Joi.string(),
+        subscription: Joi.string(),
       });
 
       const validation = await schema.validate(req.body);
