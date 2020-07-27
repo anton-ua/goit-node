@@ -22,6 +22,11 @@ userRouter.post(
   userController.userRegister
 );
 
+userRouter.get(
+  "/auth/verify/:verificationToken",
+  userController.verificateEmail
+);
+
 userRouter.post(
   "/auth/login",
   userController.validateUserObject,

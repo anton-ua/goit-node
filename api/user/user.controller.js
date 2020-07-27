@@ -8,6 +8,8 @@ const { promises: fsPromise } = require("fs");
 const imagemin = require("imagemin");
 const imageminJpegtran = require("imagemin-jpegtran");
 const imageminPngquant = require("imagemin-pngquant");
+const { v4: uuidv4 } = require("uuid");
+const sgMail = require("@sendgrid/mail");
 
 class userController {
   static userRegister = async (req, res, next) => {
@@ -25,7 +27,16 @@ class userController {
         +process.env.BCRYPT_SALT_ROUNDS
       );
 
-      const userToAdd = { email: req.body.email, passwordHash, avatarURL };
+      const verificationToken = uuidv4();
+
+      this.sendVerificationEmail(req.body.email, verificationToken);
+
+      const userToAdd = {
+        email: req.body.email,
+        passwordHash,
+        avatarURL,
+        verificationToken,
+      };
 
       const user = await userModel.create(userToAdd);
       res.status(201).json({
@@ -51,6 +62,36 @@ class userController {
     await fsPromise.writeFile(avatarPath + "/" + avatarName, avatar);
 
     return `http://localhost:${process.env.PORT}/images/${avatarName}`;
+  };
+
+  static sendVerificationEmail = (email, verificationToken) => {
+    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
+    const msg = {
+      to: email,
+      from: process.env.EMAIL,
+      subject: "Verification",
+      text: `http://localhost:${process.env.PORT}/verify/${verificationToken}`,
+      html: `<p>Please, <a href=http://localhost:${process.env.PORT}/auth/verify/${verificationToken}>click</a> to verify your email</p>`,
+    };
+
+    sgMail.send(msg);
+  };
+
+  static verificateEmail = async (req, res, next) => {
+    try {
+      const user = await userModel.findOne(req.params);
+
+      if (!user) {
+        return res.status(404).send("User not found");
+      }
+
+      await userModel.findByIdAndUpdate(user._id, { verificationToken: null });
+
+      res.status(200).send("Your email verified");
+    } catch (err) {
+      next(err);
+    }
   };
 
   static validateUserObject = async (req, res, next) => {
@@ -82,7 +123,6 @@ class userController {
         return res.status(401).send({ message: "Email or password is wrong" });
       }
 
-      // const isPassValid = await this.validatePassword(email, password);
       const isPassValid = await bcrypt.compare(password, user.passwordHash);
 
       if (!isPassValid) {
@@ -116,7 +156,6 @@ class userController {
       return res.status(401).send({ message: "Email or password is wrong" });
     }
 
-    // const isPassValid = await this.validatePassword(email, password);
     const isPassValid = await bcrypt.compare(password, user.passwordHash);
 
     if (!isPassValid) {

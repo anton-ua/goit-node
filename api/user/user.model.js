@@ -11,6 +11,7 @@ const userSchema = new Schema({
     default: "free",
   },
   token: { type: String },
+  verificationToken: { type: String },
 });
 
 const userModel = mongoose.model("User", userSchema);
