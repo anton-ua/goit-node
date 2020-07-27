@@ -1,5 +1,18 @@
 const express = require("express");
+const path = require("path");
 const userController = require("./user.controller");
+const multer = require("multer");
+
+const storage = multer.diskStorage({
+  destination: "api/tmp",
+
+  filename: function (req, file, cb) {
+    const fileExt = path.parse(file.originalname).ext;
+    cb(null, Date.now() + fileExt);
+  },
+});
+
+const upload = multer({ storage });
 
 const userRouter = express.Router();
 
@@ -12,7 +25,6 @@ userRouter.post(
 userRouter.post(
   "/auth/login",
   userController.validateUserObject,
-  userController.validatePassword,
   userController.userLogin
 );
 
@@ -31,7 +43,15 @@ userRouter.get(
 userRouter.patch(
   "/users",
   userController.validateToken,
+  userController.validateUpdateSubscription,
   userController.updateSubscription
+);
+
+userRouter.patch(
+  "/users/avatars",
+  upload.single("avatar"),
+  userController.validateToken,
+  userController.updateAvatar
 );
 
 module.exports = userRouter;

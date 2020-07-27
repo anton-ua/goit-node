@@ -11,6 +11,8 @@ const { json } = require("express");
 
 const app = express();
 
+app.use(express.static("api/public"));
+
 app.use(json());
 app.use(cors());
 app.use(morgan());
@@ -33,8 +35,12 @@ const dbConnect = async () => {
   }
 };
 
-dbConnect();
+const startServer = async () => {
+  await dbConnect();
 
-app.listen(process.env.PORT, () =>
-  console.log(`App listening at http://localhost:${process.env.PORT}`)
-);
+  app.listen(process.env.PORT, () =>
+    console.log(`App listening at http://localhost:${process.env.PORT}`)
+  );
+};
+
+startServer();
